@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>휘매쓰 연산 챌린지!</title>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" defer></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            text-align: center;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+        }
+        .energy-bar {
+            height: 20px;
+            width: 100%;
+            background-color: #ccc;
+            margin-bottom: 20px;
+            border-radius: 10px;
+        }
+        .energy-fill {
+            height: 100%;
+            background-color: #4caf50;
+            width: 100%;
+            border-radius: 10px;
+        }
+        .question {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        .choices {
+            list-style: none;
+            padding: 0;
+        }
+        .choices li {
+            margin-bottom: 10px;
+        }
+        button {
+            padding: 10px;
+            font-size: 18px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            background-color: #008cba;
+            color: white;
+        }
+        button:hover {
+            background-color: #005f6b;
+        }
+        #score {
+            margin-top: 20px;
+            font-size: 18px;
+        }
+        #time {
+            margin-top: 10px;
+            font-size: 18px;
+        }
+        #remaining-lives {
+            margin-top: 10px;
+            font-size: 18px;
+            color: red;
+        }
+        #difficulty-selection {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="difficulty-selection">
+        <h1>난이도를 선택하세요</h1>
+        <button onclick="startGame('hard')">최상 (20초)</button>
+        <button onclick="startGame('medium')">상 (30초)</button>
+        <button onclick="startGame('easy')">중 (40초)</button>
+        <button onclick="startGame('lowest')">하 (시간 제한 없음)</button>
+    </div>
+
+    <div class="container" id="game-container" style="display:none;">
+        <h1>휘매쓰 연산 챌린지!</h1>
+        <div class="energy-bar">
+            <div class="energy-fill" id="energy-fill"></div>
+        </div>
+        <div id="time"></div>
+        <div class="question" id="question"></div>
+        <ul class="choices" id="choices">
+        </ul>
+        <div id="score"></div>
+        <div id="remaining-lives"></div>
+    </div>
+
+    <script>
+        const problems = [
+    {question: "\\( 2a \\times 7b \\)", answer: "14ab", choices: ["14ab", "14a^2b", "15ab", "13ab"]},
+    {question: "\\( 4x \\times 8y \\)", answer: "32xy", choices: ["32xy", "30xy", "28xy", "32x^2y"]},
+    {question: "\\( 2x^2 \\times 6y \\)", answer: "12x^2y", choices: ["12x^2y", "12x^3y", "10x^2y", "13x^2y"]},
+    {question: "\\( (-3a) \\times 2b \\)", answer: "-6ab", choices: ["-6ab", "-6a^2b", "-8ab", "-5ab"]},
+    {question: "\\( -6x \\times (-7y) \\)", answer: "42xy", choices: ["42xy", "41xy", "42x^2y", "43xy"]},
+    {question: "\\( -8ab^2 \\times (-2a^2b) \\)", answer: "16a^3b^3", choices: ["16a^3b^3", "16a^3b^2", "18a^3b^3", "15a^3b^3"]},
+    {question: "\\( 7a^2 \\times (-8b^3) \\)", answer: "-56a^2b^3", choices: ["-56a^2b^3", "-56a^3b^3", "-54a^2b^3", "-57a^2b^3"]},
+    {question: "\\( 6ab \\times 2b \\)", answer: "12ab^2", choices: ["12ab^2", "12a^2b^2", "11ab^2", "10ab^2"]},
+    {question: "\\( 6a^3 \\times 7b^4 \\)", answer: "42a^3b^4", choices: ["41a^3b^4", "42a^3b^4", "40a^3b^4", "42a^3b^5"]},
+    {question: "\\( (-2a)^2 \\times (-3a) \\)", answer: "-12a^3", choices: ["-12a^3", "-12a^2", "-14a^3", "-13a^3"]},
+    {question: "\\( x^2y^2 \\times (4xy^2)^2 \\)", answer: "16x^4y^6", choices: ["16x^4y^6", "16x^5y^6", "14x^4y^6", "15x^4y^6"]},
+    {question: "\\( 8a^2b^8 \\times 7ab^4 \\)", answer: "56a^3b^{12}", choices: ["55a^3b^{12}", "56a^3b^{12}", "54a^3b^{12}", "56a^3b^{13}"]},
+    {question: "\\( (-7x)^2 \\times (-9xy) \\)", answer: "-441x^3y", choices: ["-441x^3y", "-441x^3y^2", "-442x^3y", "-443x^3y"]},
+    {question: "\\( 4x^2y \\times \\frac{1}{2x^3} \\)", answer: "2 \\dfrac{y}{x}", choices: ["2 \\dfrac{y}{x}", "2 \\dfrac{y}{x^2}", "1 \\dfrac{y}{x}", "3 \\dfrac{y}{x}"]},
+    {question: "\\( (-6xy) \\times (- \\frac{1}{8x}) \\)", answer: "\\dfrac{3y}{4}", choices: ["\\dfrac{3y}{4}", "\\dfrac{3y}{4x}", "\\dfrac{2y}{4}", "\\dfrac{4y}{4}"]},
+    {question: "\\( (-ab^6) \\times (-2a^2b) \\)", answer: "2a^3b^7", choices: ["2a^3b^7", "2a^3b^6", "4a^3b^7", "3a^3b^7"]},
+    {question: "\\( 4xy^2 \\times (- \\frac{3}{8xy}) \\)", answer: "- \\dfrac{3y}{2}", choices: ["- \\dfrac{3y}{2}", "- \\dfrac{3y}{2x}", "- \\dfrac{2y}{2}", "- \\dfrac{4y}{2}"]},
+    {question: "\\( (-9a^2b^2) \\times (- \\frac{1}{7ab^6}) \\)", answer: "\\dfrac{9a}{7b^4}", choices: ["\\dfrac{9a}{7b^4}", "\\dfrac{9a}{7b^5}", "\\dfrac{10a}{7b^4}", "\\dfrac{8a}{7b^4}"]},
+    {question: "\\( (3xy)^2 \\times x^2y^3 \\)", answer: "9x^4y^5", choices: ["9x^4y^5", "9x^5y^5", "8x^4y^5", "11x^4y^5"]},
+    {question: "\\( (-6a)^2 \\times (-2b^3) \\)", answer: "-72a^2b^3", choices: ["-72a^2b^3", "-72a^2b^2", "-71a^2b^3", "-73a^2b^3"]},
+    {question: "\\( (8xy^6)^2 \\times (-x^2y)^2 \\)", answer: "64x^6y^{14}", choices: ["64x^6y^{14}", "64x^6y^{15}", "65x^6y^{14}", "63x^6y^{14}"]},
+    {question: "\\( ab^6 \\times (-2a^2b^6)^6 \\)", answer: "64a^{13}b^{42}", choices: ["64a^{13}b^{42}", "64a^{13}b^{43}", "65a^{13}b^{42}", "63a^{13}b^{42}"]},
+    {question: "\\( 2a^2b^6z^2 \\times 4a^2b^4z^3 \\)", answer: "8a^4b^{10}z^5", choices: ["8a^4b^{10}z^5", "8a^5b^{10}z^5", "10a^4b^{10}z^5", "7a^4b^{10}z^5"]},
+    {question: "\\( (-x^2yz^3) \\times (-8x^2y^3z^2) \\)", answer: "8x^4y^4z^5", choices: ["8x^4y^4z^5", "8x^4y^4z^6", "9x^4y^4z^5", "7x^4y^4z^5"]},
+    {question: "\\( (-2xy^6z^2) \\times 2x^3y^7z^2 \\)", answer: "-4x^4y^{13}z^4", choices: ["-4x^4y^{13}z^4", "-4x^4y^{12}z^4", "-6x^4y^{13}z^4", "-5x^4y^{13}z^4"]},
+    {question: "\\( 8ab \\times (-6a) \\times 2b^2 \\)", answer: "-96a^2b^3", choices: ["-96a^2b^3", "-96a^2b^4", "-95a^2b^3", "-94a^2b^3"]},
+    {question: "\\( 6x^8 \\times 2x^3y^7 \\times (-xy^3) \\)", answer: "-12x^{12}y^{10}", choices: ["-12x^{12}y^{10}", "-12x^{12}y^{11}", "-14x^{12}y^{10}", "-13x^{12}y^{10}"]},
+    {question: "\\( 8x^6y^2 \\times (-7xy) \\times x^2y^3 \\)", answer: "-56x^9y^6", choices: ["-56x^9y^6", "-56x^9y^7", "-57x^9y^6", "-54x^9y^6"]},
+    {question: "\\( \\left( \\frac{-2a}{b} \\right)^2 \\times \\left( \\frac{a^3}{b^6} \\right)^3 \\times (-ab) \\)", answer: "-\\dfrac{4a^{12}}{b^{19}}", choices: ["-\\dfrac{4a^{12}}{b^{19}}", "-\\dfrac{4a^{12}}{b^{20}}", "-\\dfrac{5a^{12}}{b^{19}}", "-\\dfrac{3a^{12}}{b^{19}}"]},
+    {question: "\\( 4x^2 \\times 3xy \\times (-xy)^2 \\)", answer: "12x^5y^3", choices: ["12x^5y^3", "12x^5y^4", "13x^5y^3", "11x^5y^3"]},
+    {question: "\\( \\frac{6x^3}{4x^2} \\)", answer: "\\dfrac{3x}{2}", choices: ["\\dfrac{3x}{2}", "\\dfrac{3x^2}{2}", "\\dfrac{2x}{2}", "\\dfrac{5x}{2}"]},
+    {question: "\\( \\frac{-24a^2b}{8ab^3} \\)", answer: "-\\dfrac{3a}{b^2}", choices: ["-\\dfrac{3a}{b^2}", "-\\dfrac{3a^2}{b^2}", "-\\dfrac{5a}{b^2}", "-\\dfrac{2a}{b^2}"]},
+    {question: "\\( \\frac{9x^2y^3}{3xy} \\)", answer: "3xy^2", choices: ["3xy^2", "3x^2y^2", "4xy^2", "2xy^2"]},
+    {question: "\\( (-4x^3y) \\times \\frac{1}{2x^2y^2} \\)", answer: "-2 \\dfrac{x}{y}", choices: ["-2 \\dfrac{x}{y}", "-2 \\dfrac{x^2}{y}", "-3 \\dfrac{x}{y}", "-1 \\dfrac{x}{y}"]},
+    {question: "\\( \\frac{16a^4b^5}{8a^2b^3} \\)", answer: "2a^2b^2", choices: ["2a^2b^2", "2a^3b^2", "4a^2b^2", "3a^2b^2"]},
+    {question: "\\( (-7x^2y) \\times (-3xy^3) \\)", answer: "21x^3y^4", choices: ["21x^3y^4", "21x^4y^4", "22x^3y^4", "20x^3y^4"]},
+    {question: "\\( (2x)^3 \\times 3x^2 \\)", answer: "24x^5", choices: ["24x^5", "24x^5y", "21x^5", "23x^5"]},
+    {question: "\\( \\frac{-14a^3}{7a^2} \\)", answer: "-2a", choices: ["-2a", "-2a^2", "-4a", "-3a"]},
+    {question: "\\( (-5xy^2)^2 \\times (-3x^2) \\)", answer: "-75x^4y^4", choices: ["-75x^4y^4", "-75x^5y^4", "-74x^4y^4", "-76x^4y^4"]},
+    {question: "\\( \\frac{12a^5b^3}{4ab^2} \\)", answer: "3a^4b", choices: ["3a^4b", "3a^5b", "5a^4b", "4a^4b"]},
+    {question: "\\( 6x \\times (-3y^2) \\times 2x^3y \\)", answer: "-36x^4y^3", choices: ["-36x^4y^3", "-36x^5y^3", "-35x^4y^3", "-34x^4y^3"]},
+    {question: "\\( \\frac{9a^4}{3a^2} \\)", answer: "3a^2", choices: ["3a^2", "3a^3", "5a^2", "4a^2"]},
+    {question: "\\( 5x^3 \\times (-2x^2y) \\times y^3 \\)", answer: "-10x^5y^4", choices: ["-10x^5y^4", "-10x^6y^4", "-9x^5y^4", "-11x^5y^4"]},
+    {question: "\\( \\frac{-21a^2b^3}{7ab} \\)", answer: "-3ab^2", choices: ["-3ab^2", "-3a^2b^2", "-2ab^2", "-5ab^2"]},
+    {question: "\\( 3x^4 \\times (-2x^3y^2) \\times y \\)", answer: "-6x^7y^3", choices: ["-6x^7y^3", "-6x^7y^4", "-5x^7y^3", "-7x^7y^3"]},
+    {question: "\\( (-6ab)^3 \\times 2ab^2 \\)", answer: "-432a^4b^5", choices: ["-432a^4b^5", "-432a^5b^5", "-430a^4b^5", "-431a^4b^5"]},
+    {question: "\\( \\frac{8x^6y^2}{4x^2y^2} \\)", answer: "2x^4", choices: ["2x^4", "2x^5", "3x^4", "1x^4"]}
+];
+
+        let currentProblemIndex = 0;
+        let score = 0;
+        let lives = 3;
+        let energyBarWidth = 100; // Percentage
+        let interval;
+        let difficulty = 'medium'; // Default difficulty
+        let timeLimit = 40; // Default time limit
+
+        function showDifficultySelection() {
+            document.getElementById('difficulty-selection').style.display = 'block';
+            document.getElementById('game-container').style.display = 'none';
+        }
+
+        function startGame(selectedDifficulty) {
+            difficulty = selectedDifficulty;
+            if (difficulty === 'hard') timeLimit = 20;
+            else if (difficulty === 'medium') timeLimit = 30;
+            else if (difficulty === 'easy') timeLimit = 40;
+            else timeLimit = Infinity; // 하 난이도는 시간 제한 없음
+
+            document.getElementById('difficulty-selection').style.display = 'none';
+            document.getElementById('game-container').style.display = 'block';
+            displayProblem();
+            startEnergyBar();
+            document.getElementById('score').innerText = "Score: " + score;
+            document.getElementById('remaining-lives').innerText = "남은 기회 : " + lives;
+        }
+
+        function displayProblem() {
+            if (currentProblemIndex >= problems.length) {
+                // 모든 문제가 끝나면 랜덤으로 다시 문제를 선택
+                currentProblemIndex = Math.floor(Math.random() * problems.length);
+            }
+
+            const problem = problems[currentProblemIndex];
+            document.getElementById('question').innerHTML = problem.question;
+
+            const choices = document.getElementById('choices');
+            choices.innerHTML = '';
+            problem.choices.forEach((choice, index) => {
+                const li = document.createElement('li');
+                const button = document.createElement('button');
+                button.innerHTML = `\\(${choice}\\)`; // MathJax를 사용하여 보기도 수식으로 표현
+                button.onclick = () => checkAnswer(choice);
+                li.appendChild(button);
+                choices.appendChild(li);
+            });
+
+            MathJax.typeset(); // 수식 재렌더링
+        }
+
+        function checkAnswer(selectedAnswer) {
+            const problem = problems[currentProblemIndex];
+
+            if (selectedAnswer === problem.answer) {
+                score += getScoreByDifficulty();
+                document.getElementById('score').innerText = "Score: " + score;
+                resetEnergyBar();
+            } else {
+                lives--;
+                document.getElementById('remaining-lives').innerText = "남은 기회 : " + lives;
+                alert('틀렸습니다! 정답: ' + problem.answer);
+                if (lives === 0) {
+                    alert('게임 오버! 총 점수: ' + score);
+                    clearInterval(interval);
+                    return;
+                }
+            }
+            currentProblemIndex++;
+            displayProblem();
+        }
+
+        function getScoreByDifficulty() {
+            if (difficulty === 'hard') return 20;
+            if (difficulty === 'medium') return 15;
+            if (difficulty === 'easy') return 13;
+            return 10;
+        }
+
+        function startEnergyBar() {
+            let timePassed = 0;
+            interval = setInterval(() => {
+                if (difficulty === 'lowest') return; // 하 난이도는 시간제한 없음
+
+                timePassed += 1;
+                energyBarWidth -= 1; // 에너지바 감소
+                document.getElementById('energy-fill').style.width = energyBarWidth + "%";
+
+                if (energyBarWidth <= 0) {
+                    clearInterval(interval);
+                    lives--;
+                    if (lives === 0) {
+                        alert('게임 오버! 총 점수: ' + score);
+                        return;
+                    }
+                    alert('시간 초과! 기회 1 감소');
+                    resetEnergyBar();
+                    displayProblem();
+                }
+            }, timeLimit * 10); // 난이도에 따라 시간 설정
+        }
+
+        function resetEnergyBar() {
+            energyBarWidth = 100;
+            document.getElementById('energy-fill').style.width = energyBarWidth + "%";
+        }
+
+        // 시작 화면에서 난이도 선택 화면 보여주기
+        showDifficultySelection();
+    </script>
+</body>
+</html>
